@@ -60,7 +60,7 @@ class Starters(commands.Cog):
 
         choices = random.sample(pokemons, 3)
 
-        # Embed unique
+        # embed principal
         embed = discord.Embed(
             title="🌟 Choisis ton starter !",
             description="Voici les trois Pokémon proposés :",
@@ -70,20 +70,17 @@ class Starters(commands.Cog):
         for poke in choices:
             shiny = self.check_shiny()
             sprite = poke["sprite_shiny"] if shiny else poke["sprite"]
-            name = f"{poke['nom']} {'★' if shiny else ''}"
+            name = f"**{poke['nom']} {'★' if shiny else ''}**"
             types = " ".join(f"{TYPE_EMOJIS.get(t, '')} {t}" for t in poke["type"])
-            color = TYPE_COLORS.get(poke["type"][0], 0x88CCEE)
 
+            # Astuce : insérer une image en ligne invisible via un lien Markdown
             embed.add_field(
-                name=f"**{name}**",
-                value=f"{types}\n[Sprite]({sprite})",
-                inline=False
+                name=name,
+                value=f"{types}\n[‎]({sprite})",  # <-- ce caractère invisible fait apparaître le sprite
+                inline=True
             )
 
-        # Couleur du premier Pokémon tiré
-        embed.color = TYPE_COLORS.get(choices[0]["type"][0], 0x88CCEE)
-        embed.set_footer(text="Utilise /choose pour sélectionner ton starter !")
-
+        embed.set_footer(text="Utilise /choose pour sélectionner ton Pokémon !")
         await interaction.response.send_message(embed=embed)
 
 
