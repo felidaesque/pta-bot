@@ -59,28 +59,33 @@ class Starters(commands.Cog):
             pokemons = json.load(f)
 
         choices = random.sample(pokemons, 3)
-        embeds = []
+
+        # Embed unique
+        embed = discord.Embed(
+            title="🌟 Choisis ton starter !",
+            description="Voici les trois Pokémon proposés :",
+            color=0x88CCEE
+        )
 
         for poke in choices:
             shiny = self.check_shiny()
             sprite = poke["sprite_shiny"] if shiny else poke["sprite"]
             name = f"{poke['nom']} {'★' if shiny else ''}"
-
-            # prépare les types avec emojis
-            types = " ".join(
-                f"{TYPE_EMOJIS.get(t, '')} {t}" for t in poke["type"]
-            )
-
+            types = " ".join(f"{TYPE_EMOJIS.get(t, '')} {t}" for t in poke["type"])
             color = TYPE_COLORS.get(poke["type"][0], 0x88CCEE)
 
-            embed = discord.Embed(title=name, description=types, color=color)
-            embed.set_image(url=sprite)
-            embeds.append(embed)
+            embed.add_field(
+                name=f"**{name}**",
+                value=f"{types}\n[Sprite]({sprite})",
+                inline=False
+            )
 
-        await interaction.response.send_message(
-            content="Voici tes trois starters ! 🌱🔥💧",
-            embeds=embeds
-        )
+        # Couleur du premier Pokémon tiré
+        embed.color = TYPE_COLORS.get(choices[0]["type"][0], 0x88CCEE)
+        embed.set_footer(text="Utilise /choose pour sélectionner ton starter !")
+
+        await interaction.response.send_message(embed=embed)
+
 
 async def setup(bot):
     await bot.add_cog(Starters(bot))
