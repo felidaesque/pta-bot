@@ -1,0 +1,112 @@
+[
+  {
+    "nom": "Bulbizarre",
+    "numero": 1,
+    "type": ["Plante", "Poison"],
+    "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/1.png",
+    "sprite_shiny": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/1.png",
+    "evolution_stage": 0,
+    "gender_ratio": {"male": 87.5, "female": 12.5},
+    "gender_rate": 0.125,
+    "is_legendary": false
+  },
+  {
+    "nom": "Herbizarre",
+    "numero": 2,
+    "type": ["Plante", "Poison"],
+    "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/2.png",
+    "sprite_shiny": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/2.png",
+    "evolution_stage": 1,
+    "gender_ratio": {"male": 87.5, "female": 12.5},
+    "gender_rate": 0.125,
+    "is_legendary": false
+  },
+  {
+    "nom": "Florizarre",
+    "numero": 3,
+    "type": ["Plante", "Poison"],
+    "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/3.png",
+    "sprite_shiny": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/3.png",
+    "evolution_stage": 2,
+    "gender_ratio": {"male": 87.5, "female": 12.5},
+    "gender_rate": 0.125,
+    "is_legendary": false
+  },
+  {
+    "nom": "Salamèche",
+    "numero": 4,
+    "type": ["Feu"],
+    "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/4.png",
+    "sprite_shiny": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/4.png",
+    "evolution_stage": 0,
+    "gender_ratio": {"male": 87.5, "female": 12.5},
+    "gender_rate": 0.125,
+    "is_legendary": false
+  },
+  {
+    "nom": "Reptincel",
+    "numero": 5,
+    "type": ["Feu"],
+    "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/5.png",
+    "sprite_shiny": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/5.png",
+    "evolution_stage": 1,
+    "gender_ratio": {"male": 87.5, "female": 12.5},
+    "gender_rate": 0.125,
+    "is_legendary": false
+  },
+  {
+    "nom": "Dracaufeu",
+    "numero": 6,
+    "type": ["Feu", "Vol"],
+    "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/6.png",
+    "sprite_shiny": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/6.png",
+    "evolution_stage": 2,
+    "gender_ratio": {"male": 87.5, "female": 12.5},
+    "gender_rate": 0.125,
+    "is_legendary": false
+  },
+  {
+    "nom": "Carapuce",
+    "numero": 7,
+    "type": ["Eau"],
+    "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/7.png",
+    "sprite_shiny": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/7.png",
+    "evolution_stage": 0,
+    "gender_ratio": {"male": 87.5, "female": 12.5},
+    "gender_rate": 0.125,
+    "is_legendary": false
+  },
+  {
+    "nom": "Carabaffe",
+    "numero": 8,
+    "type": ["Eau"],
+    "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/8.png",
+    "sprite_shiny": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/8.png",
+    "evolution_stage": 1,
+    "gender_ratio": {"male": 87.5, "female": 12.5},
+    "gender_rate": 0.125,
+    "is_legendary": false
+  },
+  {
+    "nom": "Tortank",
+    "numero": 9,
+    "type": ["Eau"],
+    "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/9.png",
+    "sprite_shiny": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/9.png",
+    "evolution_stage": 2,
+    "gender_ratio": {"male": 87.5, "female": 12.5},
+    "gender_rate": 0.125,
+    "is_legendary": false
+  },
+  {
+    "nom": "Chenipan",
+    "numero": 10,
+    "type": ["Insecte"],
+    "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/10.png",
+    "sprite_shiny": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/10.png",
+    "evolution_stage": 0,
+    "gender_ratio": {"male": 50, "female": 50},
+    "gender_rate": 0.5,
+    "is_legendary": false
+  }
+]
