@@ -11,13 +11,15 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 async def on_ready():
     print(f"Connecté en tant que {bot.user}")
     try:
-        synced = await bot.tree.sync()
-        print(f"{len(synced)} commande(s) slash synchronisée(s).")
+        await bot.tree.sync()
+        print("Commandes slash synchronisées.")
     except Exception as e:
-        print(f"Erreur de sync : {e}")
+        print(e)
 
-@bot.tree.command(name="ping", description="Teste si le bot répond")
-async def ping(interaction: discord.Interaction):
-    await interaction.response.send_message("Pong ! 🏓")
+async def load_extensions():
+    await bot.load_extension("cogs.starters")
 
-bot.run(os.getenv("DISCORD_TOKEN"))
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(load_extensions())
+    bot.run(os.getenv("DISCORD_TOKEN"))
