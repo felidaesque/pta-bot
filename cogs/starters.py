@@ -24,28 +24,6 @@ TYPE_COLORS = {
     "Fée": 0xD685AD
 }
 
-TYPE_EMOJIS = {
-    "Normal": "⚪",
-    "Feu": "🔥",
-    "Eau": "💧",
-    "Électrik": "⚡",
-    "Plante": "🌿",
-    "Glace": "❄️",
-    "Combat": "🥊",
-    "Poison": "☠️",
-    "Sol": "🌍",
-    "Vol": "🌬️",
-    "Psy": "🔮",
-    "Insecte": "🐛",
-    "Roche": "🪨",
-    "Spectre": "👻",
-    "Dragon": "🐉",
-    "Ténèbres": "🌑",
-    "Acier": "⚙️",
-    "Fée": "✨"
-}
-
-
 class Starters(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -55,34 +33,32 @@ class Starters(commands.Cog):
 
     @discord.app_commands.command(name="starter", description="Reçois trois Pokémon de base au hasard")
     async def starter(self, interaction: discord.Interaction):
+        # charge les données
         with open("data/first_stage_pokemons.json", "r", encoding="utf-8") as f:
             pokemons = json.load(f)
 
+        # tire 3 Pokémon
         choices = random.sample(pokemons, 3)
-
-        # embed principal
-        embed = discord.Embed(
-            title="🌟 Choisis ton starter !",
-            description="Voici les trois Pokémon proposés :",
-            color=0x88CCEE
-        )
+        embeds = []
 
         for poke in choices:
             shiny = self.check_shiny()
             sprite = poke["sprite_shiny"] if shiny else poke["sprite"]
-            name = f"**{poke['nom']} {'★' if shiny else ''}**"
-            types = " ".join(f"{TYPE_EMOJIS.get(t, '')} {t}" for t in poke["type"])
+            name = f"{poke['nom']} {'★' if shiny else ''}"
+            types = ", ".join(poke["type"])
 
-            # Astuce : insérer une image en ligne invisible via un lien Markdown
-            embed.add_field(
-                name=name,
-                value=f"{types}\n[‎]({sprite})",  # <-- ce caractère invisible fait apparaître le sprite
-                inline=True
-            )
+            # couleur du premier type
+            color = TYPE_COLORS.get(poke["type"][0], 0x88CCEE)
 
-        embed.set_footer(text="Utilise /choose pour sélectionner ton Pokémon !")
-        await interaction.response.send_message(embed=embed)
+            # embed pour chaque Pokémon
+            embed = discord.Embed(title=name, description=types, color=color)
+            embed.set_image(url=sprite)
+            embeds.append(embed)
 
+        await interaction.response.send_message(
+            content="Voici tes trois starters ! 🌱🔥💧",
+            embeds=embeds
+        )
 
 async def setup(bot):
     await bot.add_cog(Starters(bot))
