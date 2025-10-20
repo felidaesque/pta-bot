@@ -28,11 +28,9 @@ class Starters(commands.Cog):
         self.bot = bot
 
     def check_shiny(self):
-        """Renvoie True 1 fois sur SHINY_CHANCE"""
         return random.randint(1, SHINY_CHANCE) == 1
 
     def merge_sprites(self, urls):
-        """Télécharge et fusionne les sprites horizontalement"""
         images = [Image.open(BytesIO(requests.get(u).content)) for u in urls]
         w, h = images[0].size
         merged = Image.new("RGBA", (w * len(images), h))
@@ -44,22 +42,24 @@ class Starters(commands.Cog):
         return discord.File(buffer, filename="starters.png")
 
     def random_gender(self, pokemon):
-        """Renvoie le genre du Pokémon selon son ratio"""
         if pokemon["gender_rate"] is None:
             return "Asexué"
         return "Femelle" if random.random() < pokemon["gender_rate"] else "Mâle"
 
     # --- Auto-complétion des types ---
-    @discord.app_commands.autocomplete(type=lambda _, __, current: [
-        discord.app_commands.Choice(name=t, value=t)
-        for t in TYPE_COLORS.keys()
-        if current.lower() in t.lower()
-    ])
+    async def type_autocomplete(self, interaction: discord.Interaction, current: str):
+        results = []
+        for t in TYPE_COLORS.keys():
+            if current.lower() in t.lower():
+                results.append(discord.app_commands.Choice(name=t, value=t))
+        return results[:25]  # max 25 suggestions
+
     @discord.app_commands.command(
         name="starter",
         description="Reçois trois Pokémon de base au hasard (tu peux filtrer par type, ex: /starter Fée)"
     )
     @discord.app_commands.describe(type="Filtre un type précis de Pokémon (ex: Feu, Eau, Fée...)")
+    @discord.app_commands.autocomplete(type=type_autocomplete)
     async def starter(self, interaction: discord.Interaction, type: str = None):
         # Charge la base de données
         with open("data/pokemons.json", "r", encoding="utf-8") as f:
@@ -67,10 +67,8 @@ class Starters(commands.Cog):
 
         chosen_type = type.capitalize() if type else None
 
-        # Filtrage : formes de base, non légendaires
         starters = [p for p in pokemons if p["evolution_stage"] == 0 and not p["is_legendary"]]
 
-        # Si un type est précisé
         if chosen_type:
             starters = [p for p in starters if chosen_type in p["type"]]
             if not starters:
@@ -80,10 +78,8 @@ class Starters(commands.Cog):
                 )
                 return
 
-        # Sélection aléatoire
         choices = random.sample(starters, min(3, len(starters)))
-        sprites = []
-        description = ""
+        sprites, description = [], ""
 
         for poke in choices:
             shiny = self.check_shiny()
@@ -95,12 +91,12 @@ class Starters(commands.Cog):
             description += f"**{poke['nom']} {shiny_star}** ({gender}) — {types}\n"
 
         file = self.merge_sprites(sprites)
+        color = TYPE_COLORS.get(chosen_type, 0x88CCEE) if chosen_type else 0x88CCEE
 
-        embed_color = TYPE_COLORS.get(chosen_type, 0x88CCEE) if chosen_type else 0x88CCEE
         embed = discord.Embed(
             title="🌟 Choisis ton starter !" if not chosen_type else f"🌟 Starters de type {chosen_type}",
             description=description,
-            color=embed_color
+            color=color
         )
         embed.set_image(url="attachment://starters.png")
         embed.set_footer(text="Utilise /choose pour sélectionner ton Pokémon !")
