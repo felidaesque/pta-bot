@@ -22,11 +22,13 @@ TYPE_EMOJIS = {
     "Ténèbres": "🌑", "Acier": "⚙️", "Fée": "✨"
 }
 
+
 class Starters(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
     def check_shiny(self):
+        """Renvoie True 1 fois sur SHINY_CHANCE"""
         return random.randint(1, SHINY_CHANCE) == 1
 
     def merge_sprites(self, urls):
@@ -41,25 +43,40 @@ class Starters(commands.Cog):
         buffer.seek(0)
         return discord.File(buffer, filename="starters.png")
 
+    def random_gender(self, pokemon):
+        """Renvoie le genre du Pokémon selon son ratio"""
+        if pokemon["gender_rate"] is None:
+            return "Asexué"
+        return "Femelle" if random.random() < pokemon["gender_rate"] else "Mâle"
+
     @discord.app_commands.command(name="starter", description="Reçois trois Pokémon de base au hasard")
     async def starter(self, interaction: discord.Interaction):
-        with open("data/first_stage_pokemons.json", "r", encoding="utf-8") as f:
+        # Charge la base de données
+        with open("data/pokemons.json", "r", encoding="utf-8") as f:
             pokemons = json.load(f)
 
-        choices = random.sample(pokemons, 3)
+        # Filtrage : uniquement les formes de base (stage 0) et pas de légendaires
+        starters = [p for p in pokemons if p["evolution_stage"] == 0 and not p["is_legendary"]]
+
+        # Sélection aléatoire
+        choices = random.sample(starters, 3)
         sprites = []
         description = ""
 
+        # Boucle d'affichage
         for poke in choices:
             shiny = self.check_shiny()
+            gender = self.random_gender(poke)
             sprite = poke["sprite_shiny"] if shiny else poke["sprite"]
             sprites.append(sprite)
-            emoji = "★" if shiny else ""
+            shiny_star = "★" if shiny else ""
             types = " ".join(f"{TYPE_EMOJIS.get(t, '')} {t}" for t in poke["type"])
-            description += f"**{poke['nom']} {emoji}** — {types}\n"
+            description += f"**{poke['nom']} {shiny_star}** ({gender}) — {types}\n"
 
+        # Fusionne les sprites horizontalement
         file = self.merge_sprites(sprites)
 
+        # Embed final
         embed = discord.Embed(
             title="🌟 Choisis ton starter !",
             description=description,
@@ -69,6 +86,7 @@ class Starters(commands.Cog):
         embed.set_footer(text="Utilise /choose pour sélectionner ton Pokémon !")
 
         await interaction.response.send_message(embed=embed, file=file)
+
 
 async def setup(bot):
     await bot.add_cog(Starters(bot))
