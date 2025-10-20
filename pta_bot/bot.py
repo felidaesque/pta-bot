@@ -14,4 +14,6 @@ async def on_ready():
 async def ping(interaction: discord.Interaction):
     await interaction.response.send_message("Pong ! 🏓")
 
-bot.run("TON_TOKEN_ICI")
+import os
+bot.run(os.getenv("DISCORD_TOKEN"))
+
