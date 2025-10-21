@@ -212,25 +212,36 @@ class Starters(commands.Cog):
     # --- /profil ---
     @discord.app_commands.command(
         name="profil",
-        description="Affiche le profil du personnage actif et son Pokémon starter."
+        description="Affiche le profil d’un personnage (le tien ou un autre des tiens)."
     )
-    async def profil(self, interaction: discord.Interaction):
+    @discord.app_commands.describe(nom="Nom du personnage (laisse vide pour ton personnage actif)")
+    async def profil(self, interaction: discord.Interaction, nom: str = None):
         users = self.load_users()
         user_id = str(interaction.user.id)
 
-        if user_id not in users or not users[user_id].get("active"):
+        if user_id not in users or not users[user_id].get("characters"):
             await interaction.response.send_message(
-                "Tu n’as pas encore de personnage actif. Utilise `/perso <nom>`.",
+                "Tu n’as encore aucun personnage. Utilise `/perso <nom>` pour en créer un !",
                 ephemeral=True
             )
             return
 
-        active = users[user_id]["active"]
-        perso_data = users[user_id]["characters"].get(active, {})
+        active = users[user_id].get("active")
+        target_name = nom or active
+
+        if not target_name or target_name not in users[user_id]["characters"]:
+            persos = ", ".join(users[user_id]["characters"].keys())
+            await interaction.response.send_message(
+                f"Impossible de trouver ce personnage. Personnages disponibles : {persos}",
+                ephemeral=True
+            )
+            return
+
+        perso_data = users[user_id]["characters"][target_name]
 
         if "starter" not in perso_data:
             await interaction.response.send_message(
-                f"Ton personnage **{active}** n’a pas encore choisi de starter. Utilise `/starter` puis `/choose`.",
+                f"Ton personnage **{target_name}** n’a pas encore choisi de starter. Utilise `/starter` puis `/choose`.",
                 ephemeral=True
             )
             return
@@ -252,7 +263,7 @@ class Starters(commands.Cog):
         shiny_star = "★" if shiny else ""
 
         embed = discord.Embed(
-            title=f"Profil de {active}",
+            title=f"Profil de {target_name}",
             color=TYPE_COLORS.get(pokemon["type"][0], 0x88CCEE)
         )
         embed.set_thumbnail(url=sprite)
@@ -261,7 +272,11 @@ class Starters(commands.Cog):
         embed.add_field(name="Niveau", value=str(perso_data.get("niveau", 1)), inline=True)
         embed.add_field(name="Expérience", value=str(perso_data.get("xp", 0)), inline=True)
         embed.add_field(name="Type", value=types, inline=False)
-        embed.set_footer(text="Les légendes commencent toujours par un starter.")
+
+        if target_name == active:
+            embed.set_footer(text="(Personnage actif)")
+        else:
+            embed.set_footer(text="(Personnage inactif)")
 
         await interaction.response.send_message(embed=embed)
 
