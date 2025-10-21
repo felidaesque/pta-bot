@@ -27,8 +27,9 @@ class Profil(commands.Cog):
         self.bot = bot
         self.GIST_ID = "b4485737f8d88706b414392796f3843f"
 
+    # --------- Fonctions internes ---------
     def load_users(self):
-        """Lecture users.json depuis l’API GitHub."""
+        """Lecture users.json depuis le Gist GitHub."""
         try:
             token = os.getenv("GITHUB_TOKEN")
             if not token:
@@ -75,23 +76,15 @@ class Profil(commands.Cog):
         with open(DATA_PATH, "r", encoding="utf-8") as f:
             return json.load(f)
 
-    # --- /portrait ---
+    # --------- Commande /profil ---------
     @discord.app_commands.command(
-        name="portrait",
-        description="Ajoute ou modifie l’image de ton personnage actif."
+        name="profil",
+        description="Affiche le profil de ton personnage actif."
     )
-    @discord.app_commands.describe(
-        fichier="Envoie une image (jpg/png/webp) pour ton personnage actif."
-    )
-    async def portrait(
-        self,
-        interaction: discord.Interaction,
-        fichier: discord.Attachment
-    ):
+    async def profil(self, interaction: discord.Interaction):
         users = self.load_users()
         user_id = str(interaction.user.id)
 
-        # vérif basique
         if user_id not in users or not users[user_id].get("characters"):
             await interaction.response.send_message(
                 "Tu n’as encore aucun personnage. Utilise `/perso <nom>` pour en créer un !",
@@ -107,7 +100,75 @@ class Profil(commands.Cog):
             )
             return
 
-        # vérif du fichier
+        perso_data = users[user_id]["characters"][active]
+        if "starter" not in perso_data:
+            await interaction.response.send_message(
+                f"Ton personnage **{active}** n’a pas encore choisi de Pokémon starter. Utilise `/starter` puis `/choose`.",
+                ephemeral=True
+            )
+            return
+
+        pokemons = self.load_pokemons()
+        pokemon = next((p for p in pokemons if p["nom"].lower() == perso_data["starter"].lower()), None)
+        if not pokemon:
+            await interaction.response.send_message("Erreur : ce Pokémon n’existe pas dans la base de données.", ephemeral=True)
+            return
+
+        shiny = perso_data.get("shiny", False)
+        sprite = pokemon["sprite_shiny"] if shiny else pokemon["sprite"]
+        types = " ".join(f"{TYPE_EMOJIS.get(t, '')} {t}" for t in pokemon["type"])
+        shiny_star = "★" if shiny else ""
+        niveau = perso_data.get("niveau", 1)
+        xp = perso_data.get("xp", 0)
+        portrait = perso_data.get("portrait")
+
+        embed = discord.Embed(
+            title=f"Profil de {active}",
+            color=TYPE_COLORS.get(pokemon["type"][0], 0x88CCEE)
+        )
+        embed.set_thumbnail(url=sprite)
+        if portrait:
+            embed.set_image(url=portrait)
+
+        embed.add_field(name="Pokémon", value=f"{pokemon['nom']} {shiny_star}", inline=True)
+        embed.add_field(name="Type", value=types, inline=True)
+        embed.add_field(name="Niveau du dresseur", value=str(niveau), inline=True)
+        embed.add_field(name="Expérience", value=str(xp), inline=True)
+        embed.set_footer(text="(Personnage actif)")
+
+        await interaction.response.send_message(embed=embed)
+
+    # --------- Commande /portrait ---------
+    @discord.app_commands.command(
+        name="portrait",
+        description="Ajoute ou modifie l’image de ton personnage actif."
+    )
+    @discord.app_commands.describe(
+        fichier="Envoie une image (jpg/png/webp) pour ton personnage actif."
+    )
+    async def portrait(
+        self,
+        interaction: discord.Interaction,
+        fichier: discord.Attachment
+    ):
+        users = self.load_users()
+        user_id = str(interaction.user.id)
+
+        if user_id not in users or not users[user_id].get("characters"):
+            await interaction.response.send_message(
+                "Tu n’as encore aucun personnage. Utilise `/perso <nom>` pour en créer un !",
+                ephemeral=True
+            )
+            return
+
+        active = users[user_id].get("active")
+        if not active or active not in users[user_id]["characters"]:
+            await interaction.response.send_message(
+                "Tu n’as aucun personnage actif. Utilise `/perso <nom>` pour en activer un.",
+                ephemeral=True
+            )
+            return
+
         if not fichier.content_type or not fichier.content_type.startswith("image/"):
             await interaction.response.send_message(
                 "Le fichier envoyé n’est pas une image valide.",
