@@ -1,6 +1,5 @@
-import discord, json, requests
+import discord, json, requests, os
 from discord.ext import commands
-import os
 
 # --- Constantes globales (à partager avec starters.py) ---
 DATA_PATH = "data/pokemons.json"
@@ -26,7 +25,6 @@ TYPE_EMOJIS = {
 class Profil(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        # même Gist ID que dans starters.py
         self.GIST_ID = "b4485737f8d88706b414392796f3843f"
 
     def load_users(self):
@@ -51,19 +49,41 @@ class Profil(commands.Cog):
             print(f"[❌] Erreur lecture users.json : {e}")
             return {}
 
+    def save_users(self, data):
+        """Sauvegarde users.json sur le Gist."""
+        try:
+            token = os.getenv("GITHUB_TOKEN")
+            if not token:
+                print("[❌] Aucun GITHUB_TOKEN défini.")
+                return
+            url = f"https://api.github.com/gists/{self.GIST_ID}"
+            headers = {
+                "Authorization": f"token {token}",
+                "Accept": "application/vnd.github+json",
+                "User-Agent": "PokemonManagerBot"
+            }
+            payload = {
+                "files": {
+                    "users.json": {"content": json.dumps(data, ensure_ascii=False, indent=4)}
+                }
+            }
+            requests.patch(url, headers=headers, json=payload, timeout=10)
+        except Exception as e:
+            print(f"[❌] Erreur sauvegarde users.json : {e}")
+
     def load_pokemons(self):
         with open(DATA_PATH, "r", encoding="utf-8") as f:
             return json.load(f)
 
-    # --- /profil ---
-        @discord.app_commands.command(
+    # --- /portrait ---
+    @discord.app_commands.command(
         name="portrait",
         description="Ajoute ou modifie l’image de ton personnage actif."
     )
-        @discord.app_commands.describe(
+    @discord.app_commands.describe(
         fichier="Envoie une image (jpg/png/webp) pour ton personnage actif."
     )
-        async def portrait(
+    async def portrait(
         self,
         interaction: discord.Interaction,
         fichier: discord.Attachment
