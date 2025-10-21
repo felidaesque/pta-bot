@@ -286,6 +286,7 @@ class Starters(commands.Cog):
         for name, data in characters.items():
             active_icon = "⭐" if name == active else "•"
             starter = data.get("starter", "Aucun")
+            shiny_star = "★" if data.get("shiny", False) else ""
             level = data.get("niveau", "?")
             description += f"{active_icon} **{name}** — {starter} {shiny_star} 〔Niveau dresseur : {level}〕\n"
         embed = discord.Embed(
