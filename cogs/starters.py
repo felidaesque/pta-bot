@@ -61,7 +61,10 @@ class Starters(commands.Cog):
     def load_users(self):
         """Charge users.json depuis ton Gist GitHub."""
         try:
-            response = requests.get(self.GIST_RAW_URL, timeout=10)
+            import time
+            # Ajoute un paramètre unique pour éviter le cache
+            url = f"{self.GIST_RAW_URL}?t={int(time.time())}"
+            response = requests.get(url, headers={"Cache-Control": "no-cache"}, timeout=10)
             response.raise_for_status()
             data = response.json()
             if isinstance(data, dict):
