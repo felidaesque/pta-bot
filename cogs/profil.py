@@ -119,6 +119,74 @@ class Profil(commands.Cog):
 
         await interaction.response.send_message(embed=embed)
 
+    # --- /portrait ---
+    @discord.app_commands.command(
+        name="portrait",
+        description="Ajoute ou modifie l’image de ton personnage actif (ou d’un autre des tiens)."
+    )
+    @discord.app_commands.describe(
+        image="Envoie une image ou colle un lien direct vers l’image (jpg/png/webp).",
+        nom="Nom du personnage (facultatif, sinon ton personnage actif sera utilisé)"
+    )
+    async def portrait(
+        self,
+        interaction: discord.Interaction,
+        image: str = None,
+        nom: str = None
+    ):
+        users = self.load_users()
+        user_id = str(interaction.user.id)
+
+        if user_id not in users or not users[user_id].get("characters"):
+            await interaction.response.send_message(
+                "Tu n’as encore aucun personnage. Utilise `/perso <nom>` pour en créer un !",
+                ephemeral=True
+            )
+            return
+
+        active = users[user_id].get("active")
+        target_name = nom or active
+
+        if not target_name or target_name not in users[user_id]["characters"]:
+            persos = ", ".join(users[user_id]["characters"].keys())
+            await interaction.response.send_message(
+                f"Impossible de trouver ce personnage. Personnages disponibles : {persos}",
+                ephemeral=True
+            )
+            return
+
+        perso_data = users[user_id]["characters"][target_name]
+
+        # si l'utilisateur a uploadé un fichier directement
+        if interaction.attachments:
+            attachment = interaction.attachments[0]
+            if not attachment.content_type.startswith("image/"):
+                await interaction.response.send_message(
+                    "Le fichier envoyé n’est pas une image valide.", ephemeral=True
+                )
+                return
+            image_url = attachment.url
+        elif image:
+            image_url = image
+        else:
+            await interaction.response.send_message(
+                "Envoie une image ou colle un lien vers celle-ci.",
+                ephemeral=True
+            )
+            return
+
+        # sauvegarde
+        perso_data["portrait"] = image_url
+        self.save_users(users)
+
+        embed = discord.Embed(
+            title=f"🖼️ Portrait mis à jour pour {target_name}",
+            color=0x88CCEE,
+            description="Image enregistrée avec succès !"
+        )
+        embed.set_image(url=image_url)
+        await interaction.response.send_message(embed=embed)
+
 
 async def setup(bot):
     await bot.add_cog(Profil(bot))
