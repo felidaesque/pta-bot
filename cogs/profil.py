@@ -60,7 +60,7 @@ class Profil(commands.Cog):
         name="portrait",
         description="Ajoute ou modifie l’image de ton personnage actif."
     )
-    @discord.app_commands.describe(
+        @discord.app_commands.describe(
         fichier="Envoie une image (jpg/png/webp) pour ton personnage actif."
     )
     async def portrait(
