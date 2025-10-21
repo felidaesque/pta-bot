@@ -322,5 +322,75 @@ class Starters(commands.Cog):
 
         await interaction.response.send_message(embed=embed)
 
+    # --- /supprimer ---
+    @discord.app_commands.command(
+        name="supprimer",
+        description="Supprime un de tes personnages (confirmation requise)."
+    )
+    @discord.app_commands.describe(nom="Nom du personnage à supprimer")
+    async def supprimer(self, interaction: discord.Interaction, nom: str):
+        users = self.load_users()
+        user_id = str(interaction.user.id)
+
+        if user_id not in users or "characters" not in users[user_id]:
+            await interaction.response.send_message(
+                "Tu n’as aucun personnage à supprimer.", ephemeral=True
+            )
+            return
+
+        if nom not in users[user_id]["characters"]:
+            persos = ", ".join(users[user_id]["characters"].keys())
+            await interaction.response.send_message(
+                f"Impossible de trouver **{nom}**. Personnages disponibles : {persos}",
+                ephemeral=True
+            )
+            return
+
+        # Demande de confirmation
+        view = discord.ui.View(timeout=30)
+
+        async def confirm(interaction_confirm: discord.Interaction):
+            if interaction_confirm.user.id != interaction.user.id:
+                await interaction_confirm.response.send_message(
+                    "Tu ne peux pas confirmer cette action.", ephemeral=True
+                )
+                return
+
+            # Suppression du personnage
+            del users[user_id]["characters"][nom]
+
+            # Si c’était le personnage actif, on en choisit un autre au hasard
+            if users[user_id].get("active") == nom:
+                remaining = list(users[user_id]["characters"].keys())
+                users[user_id]["active"] = remaining[0] if remaining else None
+
+            self.save_users(users)
+            await interaction_confirm.response.edit_message(
+                content=f"🗑️ Le personnage **{nom}** a été supprimé.",
+                view=None
+            )
+
+        async def cancel(interaction_cancel: discord.Interaction):
+            if interaction_cancel.user.id == interaction.user.id:
+                await interaction_cancel.response.edit_message(
+                    content="Suppression annulée.",
+                    view=None
+                )
+
+        confirm_button = discord.ui.Button(label="Confirmer", style=discord.ButtonStyle.danger)
+        cancel_button = discord.ui.Button(label="Annuler", style=discord.ButtonStyle.secondary)
+
+        confirm_button.callback = confirm
+        cancel_button.callback = cancel
+
+        view.add_item(confirm_button)
+        view.add_item(cancel_button)
+
+        await interaction.response.send_message(
+            f"⚠️ Es-tu sûr de vouloir supprimer **{nom}** ? Cette action est irréversible.",
+            view=view,
+            ephemeral=True
+        )
+
 async def setup(bot):
     await bot.add_cog(Starters(bot))
