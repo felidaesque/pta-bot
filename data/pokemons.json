@@ -8500,7 +8500,7 @@
 		"evolution_stage": 0,
 		"gender_ratio": {"male": 0, "female": 0},
 		"gender_rate": null,
-		"is_legendary": false
+		"is_legendary": true
 	},
 	{
 		"nom": "Silvallié",
@@ -8511,7 +8511,7 @@
 		"evolution_stage": 1,
 		"gender_ratio": {"male": 0, "female": 0},
 		"gender_rate": null,
-		"is_legendary": false
+		"is_legendary": true
 	},
 	{
 		"nom": "Météno",
