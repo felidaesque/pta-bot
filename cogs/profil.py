@@ -63,7 +63,7 @@ class Profil(commands.Cog):
         @discord.app_commands.describe(
         fichier="Envoie une image (jpg/png/webp) pour ton personnage actif."
     )
-    async def portrait(
+        async def portrait(
         self,
         interaction: discord.Interaction,
         fichier: discord.Attachment
