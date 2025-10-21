@@ -56,87 +56,22 @@ class Profil(commands.Cog):
             return json.load(f)
 
     # --- /profil ---
-    @discord.app_commands.command(
-        name="profil",
-        description="Affiche le profil d’un personnage (le tien ou un autre des tiens)."
-    )
-    @discord.app_commands.describe(nom="Nom du personnage (laisse vide pour ton personnage actif)")
-    async def profil(self, interaction: discord.Interaction, nom: str = None):
-        users = self.load_users()
-        user_id = str(interaction.user.id)
-
-        if user_id not in users or not users[user_id].get("characters"):
-            await interaction.response.send_message(
-                "Tu n’as encore aucun personnage. Utilise `/perso <nom>` pour en créer un !",
-                ephemeral=True
-            )
-            return
-
-        active = users[user_id].get("active")
-        target_name = nom or active
-
-        if not target_name or target_name not in users[user_id]["characters"]:
-            persos = ", ".join(users[user_id]["characters"].keys())
-            await interaction.response.send_message(
-                f"Impossible de trouver ce personnage. Personnages disponibles : {persos}",
-                ephemeral=True
-            )
-            return
-
-        perso_data = users[user_id]["characters"][target_name]
-        if "starter" not in perso_data:
-            await interaction.response.send_message(
-                f"Ton personnage **{target_name}** n’a pas encore choisi de starter. Utilise `/starter` puis `/choose`.",
-                ephemeral=True
-            )
-            return
-
-        pokemons = self.load_pokemons()
-        pokemon = next((p for p in pokemons if p["nom"].lower() == perso_data["starter"].lower()), None)
-        if not pokemon:
-            await interaction.response.send_message(
-                "Erreur : ton Pokémon n’existe pas dans la base de données.",
-                ephemeral=True
-            )
-            return
-
-        shiny = perso_data.get("shiny", False)
-        sprite = pokemon["sprite_shiny"] if shiny else pokemon["sprite"]
-        types = " ".join(f"{TYPE_EMOJIS.get(t, '')} {t}" for t in pokemon["type"])
-        shiny_star = "★" if shiny else ""
-
-        embed = discord.Embed(
-            title=f"Profil de {target_name}",
-            color=TYPE_COLORS.get(pokemon["type"][0], 0x88CCEE)
-        )
-        embed.set_thumbnail(url=sprite)
-        embed.add_field(name="Pokémon", value=f"**{pokemon['nom']} {shiny_star}**", inline=False)
-        embed.add_field(name="Genre", value=perso_data.get("gender", 'Inconnu'), inline=True)
-        embed.add_field(name="Niveau", value=str(perso_data.get("niveau", 1)), inline=True)
-        embed.add_field(name="Expérience", value=str(perso_data.get("xp", 0)), inline=True)
-        embed.add_field(name="Type", value=types, inline=False)
-        embed.set_footer(text="(Personnage actif)" if target_name == active else "(Personnage inactif)")
-
-        await interaction.response.send_message(embed=embed)
-
-    # --- /portrait ---
-    @discord.app_commands.command(
+        @discord.app_commands.command(
         name="portrait",
-        description="Ajoute ou modifie l’image de ton personnage actif (ou d’un autre des tiens)."
+        description="Ajoute ou modifie l’image de ton personnage actif."
     )
     @discord.app_commands.describe(
-        image="Envoie une image ou colle un lien direct vers l’image (jpg/png/webp).",
-        nom="Nom du personnage (facultatif, sinon ton personnage actif sera utilisé)"
+        fichier="Envoie une image (jpg/png/webp) pour ton personnage actif."
     )
     async def portrait(
         self,
         interaction: discord.Interaction,
-        image: str = None,
-        nom: str = None
+        fichier: discord.Attachment
     ):
         users = self.load_users()
         user_id = str(interaction.user.id)
 
+        # vérif basique
         if user_id not in users or not users[user_id].get("characters"):
             await interaction.response.send_message(
                 "Tu n’as encore aucun personnage. Utilise `/perso <nom>` pour en créer un !",
@@ -145,42 +80,28 @@ class Profil(commands.Cog):
             return
 
         active = users[user_id].get("active")
-        target_name = nom or active
-
-        if not target_name or target_name not in users[user_id]["characters"]:
-            persos = ", ".join(users[user_id]["characters"].keys())
+        if not active or active not in users[user_id]["characters"]:
             await interaction.response.send_message(
-                f"Impossible de trouver ce personnage. Personnages disponibles : {persos}",
+                "Tu n’as aucun personnage actif. Utilise `/perso <nom>` pour en activer un.",
                 ephemeral=True
             )
             return
 
-        perso_data = users[user_id]["characters"][target_name]
-
-        # si l'utilisateur a uploadé un fichier directement
-        if interaction.attachments:
-            attachment = interaction.attachments[0]
-            if not attachment.content_type.startswith("image/"):
-                await interaction.response.send_message(
-                    "Le fichier envoyé n’est pas une image valide.", ephemeral=True
-                )
-                return
-            image_url = attachment.url
-        elif image:
-            image_url = image
-        else:
+        # vérif du fichier
+        if not fichier.content_type or not fichier.content_type.startswith("image/"):
             await interaction.response.send_message(
-                "Envoie une image ou colle un lien vers celle-ci.",
+                "Le fichier envoyé n’est pas une image valide.",
                 ephemeral=True
             )
             return
 
-        # sauvegarde
+        image_url = fichier.url
+        perso_data = users[user_id]["characters"][active]
         perso_data["portrait"] = image_url
         self.save_users(users)
 
         embed = discord.Embed(
-            title=f"🖼️ Portrait mis à jour pour {target_name}",
+            title=f"🖼️ Portrait mis à jour pour {active}",
             color=0x88CCEE,
             description="Image enregistrée avec succès !"
         )
