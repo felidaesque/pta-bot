@@ -126,9 +126,15 @@ class Profil(commands.Cog):
             title=f"Profil de {active}",
             color=TYPE_COLORS.get(pokemon["type"][0], 0x88CCEE)
         )
-        embed.set_thumbnail(url=sprite)
+        
+        # portrait devient l’image principale
         if portrait:
-            embed.set_image(url=portrait)
+            embed.set_thumbnail(url=portrait)
+        else:
+            embed.set_thumbnail(url=sprite)  # fallback si pas de portrait
+        
+        # le Pokémon passe en bas comme avatar
+        embed.set_image(url=sprite)
 
         embed.add_field(name="Pokémon", value=f"{pokemon['nom']} {shiny_star}", inline=True)
         embed.add_field(name="Type", value=types, inline=True)
