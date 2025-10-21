@@ -247,11 +247,11 @@ class Starters(commands.Cog):
             return
 
         users[user_id]["characters"][active] = {
+            "niveau": 1,
+            "xp": 0,
             "starter": choix["nom"],
             "shiny": choix["shiny"],
-            "gender": choix["gender"],
-            "niveau": 5,
-            "xp": 0
+            "gender": choix["gender"]
         }
         self.save_users(users)
 
@@ -287,8 +287,7 @@ class Starters(commands.Cog):
             active_icon = "⭐" if name == active else "•"
             starter = data.get("starter", "Aucun")
             level = data.get("niveau", "?")
-            shiny_star = "★" if data.get("shiny", False) else ""
-            description += f"{active_icon} **{name}** — {starter} {shiny_star} (Niv. {level})\n"
+            description += f"{active_icon} **{name}** — {starter} {shiny_star} 〔Niveau dresseur : {level}〕\n"
         embed = discord.Embed(
             title=f"Personnages de {interaction.user.display_name}",
             description=description,
@@ -385,8 +384,6 @@ class Starters(commands.Cog):
             "type": pokemon["type"],
             "shiny": shiny,
             "gender": gender,
-            "niveau": 1,
-            "xp": 0
         }
         perso = users[target_id]["characters"][character]
         if "pokemons" not in perso:
