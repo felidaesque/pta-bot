@@ -62,9 +62,13 @@ class Starters(commands.Cog):
         """Charge users.json depuis ton Gist GitHub."""
         try:
             import time
-            # Ajoute un paramètre unique pour éviter le cache
-            url = f"{self.GIST_RAW_URL}?t={int(time.time())}"
-            response = requests.get(url, headers={"Cache-Control": "no-cache"}, timeout=10)
+            url = f"{self.GIST_RAW_URL}?_={int(time.time())}"
+            headers = {
+                "Cache-Control": "no-cache",
+                "Pragma": "no-cache",
+                "User-Agent": "PokémonManagerBot"
+            }
+            response = requests.get(url, headers=headers, timeout=10)
             response.raise_for_status()
             data = response.json()
             if isinstance(data, dict):
@@ -74,9 +78,9 @@ class Starters(commands.Cog):
         except Exception as e:
             print(f"[❌] Erreur de chargement users.json depuis Gist : {e}")
             return {}
-
+    
     def save_users(self, data):
-        """Sauvegarde users.json sur ton Gist GitHub."""
+        """Sauvegarde users.json sur ton Gist GitHub, puis recharge immédiatement la version à jour."""
         token = os.getenv("GITHUB_TOKEN")
         if not token:
             print("[❌] Aucun GITHUB_TOKEN défini dans les variables d’environnement.")
@@ -85,7 +89,8 @@ class Starters(commands.Cog):
             url = f"https://api.github.com/gists/{self.GIST_ID}"
             headers = {
                 "Authorization": f"token {token}",
-                "Accept": "application/vnd.github+json"
+                "Accept": "application/vnd.github+json",
+                "User-Agent": "PokémonManagerBot"
             }
             payload = {
                 "files": {
@@ -97,6 +102,13 @@ class Starters(commands.Cog):
             response = requests.patch(url, headers=headers, json=payload, timeout=10)
             response.raise_for_status()
             print("[✅] users.json sauvegardé avec succès sur Gist.")
+    
+            # ⚠️ relecture forcée de la nouvelle version (anti-cache GitHub)
+            import time
+            requests.get(f"{self.GIST_RAW_URL}?_={int(time.time())}",
+                         headers={"Cache-Control": "no-cache", "Pragma": "no-cache"},
+                         timeout=5)
+    
         except Exception as e:
             print(f"[❌] Erreur de sauvegarde users.json sur Gist : {e}")
 
