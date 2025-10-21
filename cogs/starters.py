@@ -209,6 +209,61 @@ class Starters(commands.Cog):
             f"Tu as choisi **{choix['nom']} {shiny_star} ({choix['gender']})** comme starter pour **{active}** ! 🎉"
         )
 
+    # --- /profil ---
+    @discord.app_commands.command(
+        name="profil",
+        description="Affiche le profil du personnage actif et son Pokémon starter."
+    )
+    async def profil(self, interaction: discord.Interaction):
+        users = self.load_users()
+        user_id = str(interaction.user.id)
+
+        if user_id not in users or not users[user_id].get("active"):
+            await interaction.response.send_message(
+                "Tu n’as pas encore de personnage actif. Utilise `/perso <nom>`.",
+                ephemeral=True
+            )
+            return
+
+        active = users[user_id]["active"]
+        perso_data = users[user_id]["characters"].get(active, {})
+
+        if "starter" not in perso_data:
+            await interaction.response.send_message(
+                f"Ton personnage **{active}** n’a pas encore choisi de starter. Utilise `/starter` puis `/choose`.",
+                ephemeral=True
+            )
+            return
+
+        # Récupération du Pokémon dans la base
+        pokemons = self.load_pokemons()
+        pokemon = next((p for p in pokemons if p["nom"].lower() == perso_data["starter"].lower()), None)
+
+        if not pokemon:
+            await interaction.response.send_message(
+                "Erreur : ton Pokémon n’existe pas dans la base de données.",
+                ephemeral=True
+            )
+            return
+
+        shiny = perso_data.get("shiny", False)
+        sprite = pokemon["sprite_shiny"] if shiny else pokemon["sprite"]
+        types = " ".join(f"{TYPE_EMOJIS.get(t, '')} {t}" for t in pokemon["type"])
+        shiny_star = "★" if shiny else ""
+
+        embed = discord.Embed(
+            title=f"Profil de {active}",
+            color=TYPE_COLORS.get(pokemon["type"][0], 0x88CCEE)
+        )
+        embed.set_thumbnail(url=sprite)
+        embed.add_field(name="Pokémon", value=f"**{pokemon['nom']} {shiny_star}**", inline=False)
+        embed.add_field(name="Genre", value=perso_data.get("gender", "Inconnu"), inline=True)
+        embed.add_field(name="Niveau", value=str(perso_data.get("niveau", 1)), inline=True)
+        embed.add_field(name="Expérience", value=str(perso_data.get("xp", 0)), inline=True)
+        embed.add_field(name="Type", value=types, inline=False)
+        embed.set_footer(text="Les légendes commencent toujours par un starter.")
+
+        await interaction.response.send_message(embed=embed)
 
 async def setup(bot):
     await bot.add_cog(Starters(bot))
