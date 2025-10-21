@@ -101,7 +101,6 @@ class Starters(commands.Cog):
         users = self.load_users()
         user_id = str(interaction.user.id)
 
-        # Vérifie le perso actif
         if user_id not in users or not users[user_id].get("active"):
             await interaction.response.send_message(
                 "Tu n’as encore aucun personnage actif. Utilise `/perso <nom>` pour en créer un !",
@@ -140,13 +139,11 @@ class Starters(commands.Cog):
             description += f"**{poke['nom']} {shiny_star}** ({gender}) — {types}\n"
             temp_data.append({"nom": poke["nom"], "shiny": shiny, "gender": gender})
 
-        # Sauvegarde temporaire dans le perso actif
         users[user_id]["characters"][active]["starters"] = temp_data
         self.save_users(users)
 
         file = self.merge_sprites(sprites)
         color = TYPE_COLORS.get(chosen_type, 0x88CCEE)
-
         embed = discord.Embed(
             title=f"🌟 Choisis ton starter ! ({active})",
             description=description,
@@ -194,7 +191,6 @@ class Starters(commands.Cog):
             )
             return
 
-        # Sauvegarde définitive du starter choisi
         users[user_id]["characters"][active] = {
             "starter": choix["nom"],
             "shiny": choix["shiny"],
@@ -218,17 +214,14 @@ class Starters(commands.Cog):
     async def profil(self, interaction: discord.Interaction, nom: str = None):
         users = self.load_users()
         user_id = str(interaction.user.id)
-
         if user_id not in users or not users[user_id].get("characters"):
             await interaction.response.send_message(
                 "Tu n’as encore aucun personnage. Utilise `/perso <nom>` pour en créer un !",
                 ephemeral=True
             )
             return
-
         active = users[user_id].get("active")
         target_name = nom or active
-
         if not target_name or target_name not in users[user_id]["characters"]:
             persos = ", ".join(users[user_id]["characters"].keys())
             await interaction.response.send_message(
@@ -236,32 +229,25 @@ class Starters(commands.Cog):
                 ephemeral=True
             )
             return
-
         perso_data = users[user_id]["characters"][target_name]
-
         if "starter" not in perso_data:
             await interaction.response.send_message(
                 f"Ton personnage **{target_name}** n’a pas encore choisi de starter. Utilise `/starter` puis `/choose`.",
                 ephemeral=True
             )
             return
-
-        # Récupération du Pokémon dans la base
         pokemons = self.load_pokemons()
         pokemon = next((p for p in pokemons if p["nom"].lower() == perso_data["starter"].lower()), None)
-
         if not pokemon:
             await interaction.response.send_message(
                 "Erreur : ton Pokémon n’existe pas dans la base de données.",
                 ephemeral=True
             )
             return
-
         shiny = perso_data.get("shiny", False)
         sprite = pokemon["sprite_shiny"] if shiny else pokemon["sprite"]
         types = " ".join(f"{TYPE_EMOJIS.get(t, '')} {t}" for t in pokemon["type"])
         shiny_star = "★" if shiny else ""
-
         embed = discord.Embed(
             title=f"Profil de {target_name}",
             color=TYPE_COLORS.get(pokemon["type"][0], 0x88CCEE)
@@ -272,12 +258,7 @@ class Starters(commands.Cog):
         embed.add_field(name="Niveau", value=str(perso_data.get("niveau", 1)), inline=True)
         embed.add_field(name="Expérience", value=str(perso_data.get("xp", 0)), inline=True)
         embed.add_field(name="Type", value=types, inline=False)
-
-        if target_name == active:
-            embed.set_footer(text="(Personnage actif)")
-        else:
-            embed.set_footer(text="(Personnage inactif)")
-
+        embed.set_footer(text="(Personnage actif)" if target_name == active else "(Personnage inactif)")
         await interaction.response.send_message(embed=embed)
 
     # --- /liste ---
@@ -288,23 +269,19 @@ class Starters(commands.Cog):
     async def liste(self, interaction: discord.Interaction):
         users = self.load_users()
         user_id = str(interaction.user.id)
-
         if user_id not in users or not users[user_id].get("characters"):
             await interaction.response.send_message(
                 "Tu n’as encore aucun personnage. Utilise `/perso <nom>` pour en créer un !",
                 ephemeral=True
             )
             return
-
         characters = users[user_id]["characters"]
         active = users[user_id].get("active")
-
         if not characters:
             await interaction.response.send_message(
                 "Tu n’as encore aucun personnage enregistré.", ephemeral=True
             )
             return
-
         description = ""
         for name, data in characters.items():
             active_icon = "⭐" if name == active else "•"
@@ -312,14 +289,12 @@ class Starters(commands.Cog):
             level = data.get("niveau", "?")
             shiny_star = "★" if data.get("shiny", False) else ""
             description += f"{active_icon} **{name}** — {starter} {shiny_star} (Niv. {level})\n"
-
         embed = discord.Embed(
             title=f"Personnages de {interaction.user.display_name}",
             description=description,
             color=0x88CCEE
         )
         embed.set_footer(text="⭐ = personnage actif")
-
         await interaction.response.send_message(embed=embed)
 
     # --- /supprimer ---
@@ -331,13 +306,11 @@ class Starters(commands.Cog):
     async def supprimer(self, interaction: discord.Interaction, nom: str):
         users = self.load_users()
         user_id = str(interaction.user.id)
-
         if user_id not in users or "characters" not in users[user_id]:
             await interaction.response.send_message(
                 "Tu n’as aucun personnage à supprimer.", ephemeral=True
             )
             return
-
         if nom not in users[user_id]["characters"]:
             persos = ", ".join(users[user_id]["characters"].keys())
             await interaction.response.send_message(
@@ -345,52 +318,87 @@ class Starters(commands.Cog):
                 ephemeral=True
             )
             return
-
-        # Demande de confirmation
         view = discord.ui.View(timeout=30)
-
         async def confirm(interaction_confirm: discord.Interaction):
             if interaction_confirm.user.id != interaction.user.id:
                 await interaction_confirm.response.send_message(
                     "Tu ne peux pas confirmer cette action.", ephemeral=True
                 )
                 return
-
-            # Suppression du personnage
             del users[user_id]["characters"][nom]
-
-            # Si c’était le personnage actif, on en choisit un autre au hasard
             if users[user_id].get("active") == nom:
                 remaining = list(users[user_id]["characters"].keys())
                 users[user_id]["active"] = remaining[0] if remaining else None
-
             self.save_users(users)
             await interaction_confirm.response.edit_message(
-                content=f"🗑️ Le personnage **{nom}** a été supprimé.",
-                view=None
+                content=f"🗑️ Le personnage **{nom}** a été supprimé.", view=None
             )
-
         async def cancel(interaction_cancel: discord.Interaction):
             if interaction_cancel.user.id == interaction.user.id:
                 await interaction_cancel.response.edit_message(
-                    content="Suppression annulée.",
-                    view=None
+                    content="Suppression annulée.", view=None
                 )
-
         confirm_button = discord.ui.Button(label="Confirmer", style=discord.ButtonStyle.danger)
         cancel_button = discord.ui.Button(label="Annuler", style=discord.ButtonStyle.secondary)
-
         confirm_button.callback = confirm
         cancel_button.callback = cancel
-
         view.add_item(confirm_button)
         view.add_item(cancel_button)
-
         await interaction.response.send_message(
             f"⚠️ Es-tu sûr de vouloir supprimer **{nom}** ? Cette action est irréversible.",
             view=view,
             ephemeral=True
         )
+
+    # --- /addpokemon (ADMIN) ---
+    @discord.app_commands.command(
+        name="addpokemon",
+        description="(ADMIN) Ajoute un Pokémon à un personnage spécifique."
+    )
+    @discord.app_commands.describe(
+        user="Utilisateur concerné",
+        character="Nom du personnage",
+        pokemon_name="Nom du Pokémon à ajouter"
+    )
+    @commands.has_permissions(administrator=True)
+    async def addpokemon(self, interaction: discord.Interaction, user: discord.User, character: str, pokemon_name: str):
+        users = self.load_users()
+        pokemons = self.load_pokemons()
+        target_id = str(user.id)
+        if target_id not in users or character not in users[target_id].get("characters", {}):
+            await interaction.response.send_message(
+                f"Impossible de trouver le personnage **{character}** pour {user.display_name}.",
+                ephemeral=True
+            )
+            return
+        pokemon = next((p for p in pokemons if p["nom"].lower() == pokemon_name.lower()), None)
+        if not pokemon:
+            await interaction.response.send_message(
+                f"Aucun Pokémon nommé **{pokemon_name}** trouvé.", ephemeral=True
+            )
+            return
+        shiny = self.check_shiny()
+        gender = self.random_gender(pokemon)
+        new_pokemon = {
+            "nom": pokemon["nom"],
+            "numero": pokemon["numero"],
+            "type": pokemon["type"],
+            "shiny": shiny,
+            "gender": gender,
+            "niveau": 1,
+            "xp": 0
+        }
+        perso = users[target_id]["characters"][character]
+        if "pokemons" not in perso:
+            perso["pokemons"] = []
+        perso["pokemons"].append(new_pokemon)
+        self.save_users(users)
+        shiny_star = "★" if shiny else ""
+        await interaction.response.send_message(
+            f"✅ **{pokemon['nom']} {shiny_star}** ajouté à **{character}** ({user.display_name}).",
+            ephemeral=True
+        )
+
 
 async def setup(bot):
     await bot.add_cog(Starters(bot))
