@@ -55,47 +55,48 @@ class Starters(commands.Cog):
             return json.load(f)
 
     # --- Configuration Gist ---
-GIST_ID = "b4485737f8d88706b414392796f3843f"
-GIST_RAW_URL = "https://gist.githubusercontent.com/felidaesque/b4485737f8d88706b414392796f3843f/raw/c2ba3abfcb43fabad3a47dd8db20491b8b1080e4/users.json"
+    GIST_ID = "b4485737f8d88706b414392796f3843f"
+    GIST_RAW_URL = "https://gist.githubusercontent.com/felidaesque/b4485737f8d88706b414392796f3843f/raw/c2ba3abfcb43fabad3a47dd8db20491b8b1080e4/users.json"
 
-def load_users(self):
-    """Charge users.json depuis ton Gist GitHub."""
-    try:
-        response = requests.get(GIST_RAW_URL, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-        if isinstance(data, dict):
-            return data
-        print("[⚠️] Format inattendu du Gist, renvoi d’un dictionnaire vide.")
-        return {}
-    except Exception as e:
-        print(f"[❌] Erreur de chargement users.json depuis Gist : {e}")
-        return {}
+    def load_users(self):
+        """Charge users.json depuis ton Gist GitHub."""
+        try:
+            response = requests.get(self.GIST_RAW_URL, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            if isinstance(data, dict):
+                return data
+            print("[⚠️] Format inattendu du Gist, renvoi d’un dictionnaire vide.")
+            return {}
+        except Exception as e:
+            print(f"[❌] Erreur de chargement users.json depuis Gist : {e}")
+            return {}
 
-def save_users(self, data):
-    """Sauvegarde users.json sur ton Gist GitHub."""
-    token = os.getenv("GITHUB_TOKEN")
-    if not token:
-        print("[❌] Aucun GITHUB_TOKEN défini dans les variables d’environnement.")
-        return
-    try:
-        url = f"https://api.github.com/gists/{GIST_ID}"
-        headers = {
-            "Authorization": f"token {token}",
-            "Accept": "application/vnd.github+json"
-        }
-        payload = {
-            "files": {
-                "users.json": {
-                    "content": json.dumps(data, ensure_ascii=False, indent=2)
+    def save_users(self, data):
+        """Sauvegarde users.json sur ton Gist GitHub."""
+        token = os.getenv("GITHUB_TOKEN")
+        if not token:
+            print("[❌] Aucun GITHUB_TOKEN défini dans les variables d’environnement.")
+            return
+        try:
+            url = f"https://api.github.com/gists/{self.GIST_ID}"
+            headers = {
+                "Authorization": f"token {token}",
+                "Accept": "application/vnd.github+json"
+            }
+            payload = {
+                "files": {
+                    "users.json": {
+                        "content": json.dumps(data, ensure_ascii=False, indent=2)
+                    }
                 }
             }
-        }
-        response = requests.patch(url, headers=headers, json=payload, timeout=10)
-        response.raise_for_status()
-        print("[✅] users.json sauvegardé avec succès sur Gist.")
-    except Exception as e:
-        print(f"[❌] Erreur de sauvegarde users.json sur Gist : {e}")
+            response = requests.patch(url, headers=headers, json=payload, timeout=10)
+            response.raise_for_status()
+            print("[✅] users.json sauvegardé avec succès sur Gist.")
+        except Exception as e:
+            print(f"[❌] Erreur de sauvegarde users.json sur Gist : {e}")
+
 
     # --- /perso ---
     @discord.app_commands.command(
