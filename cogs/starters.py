@@ -280,5 +280,47 @@ class Starters(commands.Cog):
 
         await interaction.response.send_message(embed=embed)
 
+    # --- /liste ---
+    @discord.app_commands.command(
+        name="liste",
+        description="Affiche la liste de tous tes personnages et leurs starters."
+    )
+    async def liste(self, interaction: discord.Interaction):
+        users = self.load_users()
+        user_id = str(interaction.user.id)
+
+        if user_id not in users or not users[user_id].get("characters"):
+            await interaction.response.send_message(
+                "Tu n’as encore aucun personnage. Utilise `/perso <nom>` pour en créer un !",
+                ephemeral=True
+            )
+            return
+
+        characters = users[user_id]["characters"]
+        active = users[user_id].get("active")
+
+        if not characters:
+            await interaction.response.send_message(
+                "Tu n’as encore aucun personnage enregistré.", ephemeral=True
+            )
+            return
+
+        description = ""
+        for name, data in characters.items():
+            active_icon = "⭐" if name == active else "•"
+            starter = data.get("starter", "Aucun")
+            level = data.get("niveau", "?")
+            shiny_star = "★" if data.get("shiny", False) else ""
+            description += f"{active_icon} **{name}** — {starter} {shiny_star} (Niv. {level})\n"
+
+        embed = discord.Embed(
+            title=f"Personnages de {interaction.user.display_name}",
+            description=description,
+            color=0x88CCEE
+        )
+        embed.set_footer(text="⭐ = personnage actif")
+
+        await interaction.response.send_message(embed=embed)
+
 async def setup(bot):
     await bot.add_cog(Starters(bot))
