@@ -1,5 +1,6 @@
 import discord, json, requests
 from discord.ext import commands
+import os
 
 # --- Constantes globales (à partager avec starters.py) ---
 DATA_PATH = "data/pokemons.json"
