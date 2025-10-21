@@ -3,9 +3,9 @@ from io import BytesIO
 from PIL import Image
 from discord.ext import commands
 
+# --- Constantes globales ---
 DATA_PATH = "data/pokemons.json"
 USERS_PATH = "data/users.json"
-
 SHINY_CHANCE = 100
 
 TYPE_COLORS = {
@@ -30,6 +30,7 @@ class Starters(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+    # --- FONCTIONS UTILITAIRES ---
     def check_shiny(self):
         return random.randint(1, SHINY_CHANCE) == 1
 
@@ -55,6 +56,7 @@ class Starters(commands.Cog):
 
     def load_users(self):
         if not os.path.exists(USERS_PATH):
+            os.makedirs(os.path.dirname(USERS_PATH), exist_ok=True)
             with open(USERS_PATH, "w", encoding="utf-8") as f:
                 json.dump({}, f)
         with open(USERS_PATH, "r", encoding="utf-8") as f:
@@ -64,6 +66,31 @@ class Starters(commands.Cog):
         with open(USERS_PATH, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
+    # --- /perso ---
+    @discord.app_commands.command(
+        name="perso",
+        description="Crée ou active un personnage (ex: /perso Sarah)"
+    )
+    @discord.app_commands.describe(nom="Nom du personnage à créer ou activer")
+    async def perso(self, interaction: discord.Interaction, nom: str):
+        users = self.load_users()
+        user_id = str(interaction.user.id)
+
+        if user_id not in users:
+            users[user_id] = {"active": nom, "characters": {nom: {}}}
+            message = f"👤 Nouveau personnage **{nom}** créé et activé."
+        else:
+            if "characters" not in users[user_id]:
+                users[user_id]["characters"] = {}
+            if nom not in users[user_id]["characters"]:
+                users[user_id]["characters"][nom] = {}
+                message = f"👤 Nouveau personnage **{nom}** créé."
+            users[user_id]["active"] = nom
+            message = f"✅ Personnage **{nom}** activé."
+
+        self.save_users(users)
+        await interaction.response.send_message(message)
+
     # --- /starter ---
     @discord.app_commands.command(
         name="starter",
@@ -71,6 +98,21 @@ class Starters(commands.Cog):
     )
     @discord.app_commands.describe(type="Filtre un type précis de Pokémon (ex: Feu, Eau, Fée...)")
     async def starter(self, interaction: discord.Interaction, type: str = None):
+        users = self.load_users()
+        user_id = str(interaction.user.id)
+
+        # Vérifie le perso actif
+        if user_id not in users or not users[user_id].get("active"):
+            await interaction.response.send_message(
+                "Tu n’as encore aucun personnage actif. Utilise `/perso <nom>` pour en créer un !",
+                ephemeral=True
+            )
+            return
+
+        active = users[user_id]["active"]
+        if active not in users[user_id]["characters"]:
+            users[user_id]["characters"][active] = {}
+
         pokemons = self.load_pokemons()
         chosen_type = type.capitalize() if type else None
         starters = [p for p in pokemons if p["evolution_stage"] == 0 and not p["is_legendary"]]
@@ -98,16 +140,15 @@ class Starters(commands.Cog):
             description += f"**{poke['nom']} {shiny_star}** ({gender}) — {types}\n"
             temp_data.append({"nom": poke["nom"], "shiny": shiny, "gender": gender})
 
-        # Sauvegarde temporaire du tirage
-        users = self.load_users()
-        users[str(interaction.user.id)] = {"starters": temp_data}
+        # Sauvegarde temporaire dans le perso actif
+        users[user_id]["characters"][active]["starters"] = temp_data
         self.save_users(users)
 
         file = self.merge_sprites(sprites)
         color = TYPE_COLORS.get(chosen_type, 0x88CCEE)
 
         embed = discord.Embed(
-            title="🌟 Choisis ton starter !",
+            title=f"🌟 Choisis ton starter ! ({active})",
             description=description,
             color=color
         )
@@ -126,13 +167,23 @@ class Starters(commands.Cog):
         users = self.load_users()
         user_id = str(interaction.user.id)
 
-        if user_id not in users or "starters" not in users[user_id]:
+        if user_id not in users or not users[user_id].get("active"):
+            await interaction.response.send_message(
+                "Tu n’as pas encore de personnage actif. Utilise `/perso <nom>`.",
+                ephemeral=True
+            )
+            return
+
+        active = users[user_id]["active"]
+        perso_data = users[user_id]["characters"].get(active, {})
+
+        if "starters" not in perso_data:
             await interaction.response.send_message(
                 "Tu n’as pas encore généré de starters avec `/starter` !", ephemeral=True
             )
             return
 
-        starters = users[user_id]["starters"]
+        starters = perso_data["starters"]
         choix = next((p for p in starters if p["nom"].lower() == nom.lower()), None)
 
         if not choix:
@@ -143,7 +194,8 @@ class Starters(commands.Cog):
             )
             return
 
-        users[user_id] = {
+        # Sauvegarde définitive du starter choisi
+        users[user_id]["characters"][active] = {
             "starter": choix["nom"],
             "shiny": choix["shiny"],
             "gender": choix["gender"],
@@ -154,7 +206,7 @@ class Starters(commands.Cog):
 
         shiny_star = "★" if choix["shiny"] else ""
         await interaction.response.send_message(
-            f"Tu as choisi **{choix['nom']} {shiny_star} ({choix['gender']})** comme starter ! 🎉"
+            f"Tu as choisi **{choix['nom']} {shiny_star} ({choix['gender']})** comme starter pour **{active}** ! 🎉"
         )
 
 
