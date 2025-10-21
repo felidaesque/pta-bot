@@ -59,24 +59,32 @@ class Starters(commands.Cog):
     GIST_RAW_URL = "https://gist.githubusercontent.com/felidaesque/b4485737f8d88706b414392796f3843f/raw/c2ba3abfcb43fabad3a47dd8db20491b8b1080e4/users.json"
 
     def load_users(self):
-        """Charge users.json depuis ton Gist GitHub."""
+        """Charge users.json directement via l’API GitHub (pas le lien raw, donc sans cache)."""
         try:
-            import time
-            url = f"{self.GIST_RAW_URL}?_={int(time.time())}"
+            token = os.getenv("GITHUB_TOKEN")
+            if not token:
+                print("[❌] Aucun GITHUB_TOKEN défini pour la lecture API.")
+                return {}
+    
+            url = f"https://api.github.com/gists/{self.GIST_ID}"
             headers = {
-                "Cache-Control": "no-cache",
-                "Pragma": "no-cache",
-                "User-Agent": "PokémonManagerBot"
+                "Authorization": f"token {token}",
+                "Accept": "application/vnd.github+json",
+                "User-Agent": "PokemonManagerBot"
             }
             response = requests.get(url, headers=headers, timeout=10)
             response.raise_for_status()
-            data = response.json()
+            gist_data = response.json()
+    
+            # on récupère le contenu directement dans la réponse JSON
+            content = gist_data["files"]["users.json"]["content"]
+            data = json.loads(content)
             if isinstance(data, dict):
                 return data
-            print("[⚠️] Format inattendu du Gist, renvoi d’un dictionnaire vide.")
+            print("[⚠️] Format inattendu du Gist, renvoi d’un dict vide.")
             return {}
         except Exception as e:
-            print(f"[❌] Erreur de chargement users.json depuis Gist : {e}")
+            print(f"[❌] Erreur de lecture users.json depuis l’API Gist : {e}")
             return {}
     
     def save_users(self, data):
