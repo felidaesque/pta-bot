@@ -1,7 +1,10 @@
-import discord, random, json, requests
+import discord, random, json, requests, os
 from io import BytesIO
 from PIL import Image
 from discord.ext import commands
+
+DATA_PATH = "data/pokemons.json"
+USERS_PATH = "data/users.json"
 
 SHINY_CHANCE = 100
 
@@ -46,27 +49,30 @@ class Starters(commands.Cog):
             return "Asexué"
         return "Femelle" if random.random() < pokemon["gender_rate"] else "Mâle"
 
-    # --- Auto-complétion des types ---
-    async def type_autocomplete(self, interaction: discord.Interaction, current: str):
-        results = []
-        for t in TYPE_COLORS.keys():
-            if current.lower() in t.lower():
-                results.append(discord.app_commands.Choice(name=t, value=t))
-        return results[:25]  # max 25 suggestions
+    def load_pokemons(self):
+        with open(DATA_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
 
+    def load_users(self):
+        if not os.path.exists(USERS_PATH):
+            with open(USERS_PATH, "w", encoding="utf-8") as f:
+                json.dump({}, f)
+        with open(USERS_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+
+    def save_users(self, data):
+        with open(USERS_PATH, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+
+    # --- /starter ---
     @discord.app_commands.command(
         name="starter",
         description="Reçois trois Pokémon de base au hasard (tu peux filtrer par type, ex: /starter Fée)"
     )
     @discord.app_commands.describe(type="Filtre un type précis de Pokémon (ex: Feu, Eau, Fée...)")
-    @discord.app_commands.autocomplete(type=type_autocomplete)
     async def starter(self, interaction: discord.Interaction, type: str = None):
-        # Charge la base de données
-        with open("data/pokemons.json", "r", encoding="utf-8") as f:
-            pokemons = json.load(f)
-
+        pokemons = self.load_pokemons()
         chosen_type = type.capitalize() if type else None
-
         starters = [p for p in pokemons if p["evolution_stage"] == 0 and not p["is_legendary"]]
 
         if chosen_type:
@@ -80,6 +86,7 @@ class Starters(commands.Cog):
 
         choices = random.sample(starters, min(3, len(starters)))
         sprites, description = [], ""
+        temp_data = []
 
         for poke in choices:
             shiny = self.check_shiny()
@@ -89,12 +96,18 @@ class Starters(commands.Cog):
             shiny_star = "★" if shiny else ""
             types = " ".join(f"{TYPE_EMOJIS.get(t, '')} {t}" for t in poke["type"])
             description += f"**{poke['nom']} {shiny_star}** ({gender}) — {types}\n"
+            temp_data.append({"nom": poke["nom"], "shiny": shiny, "gender": gender})
+
+        # Sauvegarde temporaire du tirage
+        users = self.load_users()
+        users[str(interaction.user.id)] = {"starters": temp_data}
+        self.save_users(users)
 
         file = self.merge_sprites(sprites)
-        color = TYPE_COLORS.get(chosen_type, 0x88CCEE) if chosen_type else 0x88CCEE
+        color = TYPE_COLORS.get(chosen_type, 0x88CCEE)
 
         embed = discord.Embed(
-            title="🌟 Choisis ton starter !" if not chosen_type else f"🌟 Starters de type {chosen_type}",
+            title="🌟 Choisis ton starter !",
             description=description,
             color=color
         )
@@ -102,6 +115,47 @@ class Starters(commands.Cog):
         embed.set_footer(text="Utilise /choose pour sélectionner ton Pokémon !")
 
         await interaction.response.send_message(embed=embed, file=file)
+
+    # --- /choose ---
+    @discord.app_commands.command(
+        name="choose",
+        description="Choisis ton Pokémon starter parmi ceux proposés par /starter."
+    )
+    @discord.app_commands.describe(nom="Nom du Pokémon que tu veux choisir")
+    async def choose(self, interaction: discord.Interaction, nom: str):
+        users = self.load_users()
+        user_id = str(interaction.user.id)
+
+        if user_id not in users or "starters" not in users[user_id]:
+            await interaction.response.send_message(
+                "Tu n’as pas encore généré de starters avec `/starter` !", ephemeral=True
+            )
+            return
+
+        starters = users[user_id]["starters"]
+        choix = next((p for p in starters if p["nom"].lower() == nom.lower()), None)
+
+        if not choix:
+            noms_dispo = ", ".join([p["nom"] for p in starters])
+            await interaction.response.send_message(
+                f"Ce Pokémon n’était pas dans ta sélection. Choisis parmi : {noms_dispo}",
+                ephemeral=True
+            )
+            return
+
+        users[user_id] = {
+            "starter": choix["nom"],
+            "shiny": choix["shiny"],
+            "gender": choix["gender"],
+            "niveau": 5,
+            "xp": 0
+        }
+        self.save_users(users)
+
+        shiny_star = "★" if choix["shiny"] else ""
+        await interaction.response.send_message(
+            f"Tu as choisi **{choix['nom']} {shiny_star} ({choix['gender']})** comme starter ! 🎉"
+        )
 
 
 async def setup(bot):
