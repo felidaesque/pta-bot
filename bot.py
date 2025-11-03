@@ -21,11 +21,13 @@ async def load_extensions():
     await bot.load_extension("cogs.profil")
     await bot.load_extension("cogs.stats")
     await bot.load_extension("cogs.classes")
+    await bot.load_extension("cogs.distinctions")
 
 if __name__ == "__main__":
     import asyncio
     asyncio.run(load_extensions())
     bot.run(os.getenv("DISCORD_TOKEN"))
+
 
 
 
