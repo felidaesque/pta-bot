@@ -19,9 +19,11 @@ async def on_ready():
 async def load_extensions():
     await bot.load_extension("cogs.starters")
     await bot.load_extension("cogs.profil")
+    await bot.load_extension("cogs.stats")
 
 if __name__ == "__main__":
     import asyncio
     asyncio.run(load_extensions())
     bot.run(os.getenv("DISCORD_TOKEN"))
+
 
