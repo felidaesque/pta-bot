@@ -225,6 +225,58 @@ class Profil(commands.Cog):
         embed.set_footer(text="(Personnage actif)")
         await interaction.response.send_message(embed=embed)
 
+    # --------- Commande /portrait ---------
+    @discord.app_commands.command(
+        name="portrait",
+        description="Ajoute ou modifie l’image de ton personnage actif."
+    )
+    @discord.app_commands.describe(
+        fichier="Envoie une image (jpg/png/webp) pour ton personnage actif."
+    )
+    async def portrait(
+        self,
+        interaction: discord.Interaction,
+        fichier: discord.Attachment
+    ):
+        users = self.load_users()
+        user_id = str(interaction.user.id)
+
+        if user_id not in users or not users[user_id].get("characters"):
+            await interaction.response.send_message(
+                "Tu n’as encore aucun personnage. Utilise `/perso <nom>` pour en créer un !",
+                ephemeral=True
+            )
+            return
+
+        active = users[user_id].get("active")
+        if not active or active not in users[user_id]["characters"]:
+            await interaction.response.send_message(
+                "Tu n’as aucun personnage actif. Utilise `/perso <nom>` pour en activer un.",
+                ephemeral=True
+            )
+            return
+
+        if not fichier.content_type or not fichier.content_type.startswith("image/"):
+            await interaction.response.send_message(
+                "Le fichier envoyé n’est pas une image valide.",
+                ephemeral=True
+            )
+            return
+
+        image_url = fichier.url
+        perso_data = users[user_id]["characters"][active]
+        perso_data["portrait"] = image_url
+        self.save_users(users)
+
+        embed = discord.Embed(
+            title=f"🖼️ Portrait mis à jour pour {active}",
+            color=0x88CCEE,
+            description="Image enregistrée avec succès !"
+        )
+        embed.set_image(url=image_url)
+        await interaction.response.send_message(embed=embed)
+
+
 
 
 async def setup(bot):
