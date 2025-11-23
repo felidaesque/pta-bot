@@ -79,12 +79,13 @@ class Profil(commands.Cog):
     # --------- Commande /profil ---------
     @discord.app_commands.command(
         name="profil",
-        description="Affiche le profil de ton personnage actif."
+        description="Affiche le profil complet de ton personnage actif."
     )
     async def profil(self, interaction: discord.Interaction):
         users = self.load_users()
         user_id = str(interaction.user.id)
 
+        # Vérifs de base
         if user_id not in users or not users[user_id].get("characters"):
             await interaction.response.send_message(
                 "Tu n’as encore aucun personnage. Utilise `/perso <nom>` pour en créer un !",
@@ -101,6 +102,7 @@ class Profil(commands.Cog):
             return
 
         perso_data = users[user_id]["characters"][active]
+
         if "starter" not in perso_data:
             await interaction.response.send_message(
                 f"Ton personnage **{active}** n’a pas encore choisi de Pokémon starter. Utilise `/starter` puis `/choose`.",
@@ -108,92 +110,121 @@ class Profil(commands.Cog):
             )
             return
 
+        # Données de base du starter
         pokemons = self.load_pokemons()
         pokemon = next((p for p in pokemons if p["nom"].lower() == perso_data["starter"].lower()), None)
         if not pokemon:
-            await interaction.response.send_message("Erreur : ce Pokémon n’existe pas dans la base de données.", ephemeral=True)
+            await interaction.response.send_message(
+                "Erreur : ce Pokémon n’existe pas dans la base de données.",
+                ephemeral=True
+            )
             return
 
         shiny = perso_data.get("shiny", False)
+        gender = perso_data.get("gender", "Inconnu")
         sprite = pokemon["sprite_shiny"] if shiny else pokemon["sprite"]
         types = " ".join(f"{TYPE_EMOJIS.get(t, '')} {t}" for t in pokemon["type"])
         shiny_star = "★" if shiny else ""
+
+        # Données de dresseur
         niveau = perso_data.get("niveau", 1)
         xp = perso_data.get("xp", 0)
+        pvs = perso_data.get("pvs")
+
+        # Données avancées
+        classes = perso_data.get("classes", [])
+        distinctions = perso_data.get("distinctions", [])
+        team = perso_data.get("pokemons", [])
+
         portrait = perso_data.get("portrait")
 
         embed = discord.Embed(
             title=f"Profil de {active}",
             color=TYPE_COLORS.get(pokemon["type"][0], 0x88CCEE)
         )
-        
-        # portrait devient l’image principale
+
+        # Portrait = thumbnail, Pokémon = image
         if portrait:
             embed.set_thumbnail(url=portrait)
         else:
-            embed.set_thumbnail(url=sprite)  # fallback si pas de portrait
-        
-        # le Pokémon passe en bas comme avatar
+            embed.set_thumbnail(url=sprite)
+
         embed.set_image(url=sprite)
 
-        embed.add_field(name="Pokémon", value=f"{pokemon['nom']} {shiny_star}", inline=True)
-        embed.add_field(name="Type", value=types, inline=True)
-        embed.add_field(name="Niveau du dresseur", value=str(niveau), inline=True)
-        embed.add_field(name="Expérience", value=str(xp), inline=True)
-        embed.set_footer(text="(Personnage actif)")
-
-        await interaction.response.send_message(embed=embed)
-
-    # --------- Commande /portrait ---------
-    @discord.app_commands.command(
-        name="portrait",
-        description="Ajoute ou modifie l’image de ton personnage actif."
-    )
-    @discord.app_commands.describe(
-        fichier="Envoie une image (jpg/png/webp) pour ton personnage actif."
-    )
-    async def portrait(
-        self,
-        interaction: discord.Interaction,
-        fichier: discord.Attachment
-    ):
-        users = self.load_users()
-        user_id = str(interaction.user.id)
-
-        if user_id not in users or not users[user_id].get("characters"):
-            await interaction.response.send_message(
-                "Tu n’as encore aucun personnage. Utilise `/perso <nom>` pour en créer un !",
-                ephemeral=True
-            )
-            return
-
-        active = users[user_id].get("active")
-        if not active or active not in users[user_id]["characters"]:
-            await interaction.response.send_message(
-                "Tu n’as aucun personnage actif. Utilise `/perso <nom>` pour en activer un.",
-                ephemeral=True
-            )
-            return
-
-        if not fichier.content_type or not fichier.content_type.startswith("image/"):
-            await interaction.response.send_message(
-                "Le fichier envoyé n’est pas une image valide.",
-                ephemeral=True
-            )
-            return
-
-        image_url = fichier.url
-        perso_data = users[user_id]["characters"][active]
-        perso_data["portrait"] = image_url
-        self.save_users(users)
-
-        embed = discord.Embed(
-            title=f"🖼️ Portrait mis à jour pour {active}",
-            color=0x88CCEE,
-            description="Image enregistrée avec succès !"
+        # Bloc starter
+        embed.add_field(
+            name="Pokémon starter",
+            value=f"{pokemon['nom']} {shiny_star}\nSexe : {gender}",
+            inline=True
         )
-        embed.set_image(url=image_url)
+        embed.add_field(
+            name="Type",
+            value=types or "Inconnu",
+            inline=True
+        )
+
+        # Bloc dresseur
+        dresseur_txt = f"Niveau : {niveau}\nExpérience : {xp}"
+        if pvs is not None:
+            dresseur_txt += f"\nPV max : {pvs}"
+        embed.add_field(
+            name="Dresseur",
+            value=dresseur_txt,
+            inline=False
+        )
+
+        # Bloc classes
+        if classes:
+            classes_txt = "\n".join(
+                f"• {c.get('nom', 'Inconnue')} (niv {c.get('niveau', 1)})"
+                for c in classes
+            )
+        else:
+            classes_txt = "Aucune classe pour le moment."
+        embed.add_field(
+            name="Classes",
+            value=classes_txt,
+            inline=False
+        )
+
+        # Bloc distinctions
+        if distinctions:
+            max_show = 5
+            lines = [f"• {d}" for d in distinctions[:max_show]]
+            if len(distinctions) > max_show:
+                rest = len(distinctions) - max_show
+                lines.append(f"... et {rest} autre(s).")
+            distinctions_txt = "\n".join(lines)
+        else:
+            distinctions_txt = "Aucune distinction pour le moment."
+        distinctions_txt += f"\n\nTotal : {len(distinctions)}"
+        embed.add_field(
+            name="Distinctions",
+            value=distinctions_txt,
+            inline=False
+        )
+
+        # Bloc équipe
+        if team:
+            team_lines = []
+            for p in team:
+                nom_poke = p.get("nom", "???")
+                shiny_mark = "★" if p.get("shiny") else ""
+                types_p = p.get("type", [])
+                types_p_txt = ", ".join(types_p) if types_p else "Type inconnu"
+                team_lines.append(f"• {nom_poke} {shiny_mark} ({types_p_txt})")
+            team_txt = "\n".join(team_lines)
+        else:
+            team_txt = "Aucun autre Pokémon pour le moment."
+        embed.add_field(
+            name="Équipe",
+            value=team_txt,
+            inline=False
+        )
+
+        embed.set_footer(text="(Personnage actif)")
         await interaction.response.send_message(embed=embed)
+
 
 
 async def setup(bot):
